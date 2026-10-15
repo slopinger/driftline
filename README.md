@@ -37,3 +37,16 @@ On our Arch host, `./deploy.sh` runs tests and installs the committed `web/` dir
 To roll back, point `current` at a previously verified release using an atomic symlink replacement. Caddy serves through the symlink without a reload; if changing site config, validate then reload Caddy. Keep releases root-owned and readable by Caddy.
 
 Optional browser QA: serve `web/`, then run `node test/browser.mjs` with Playwright available. `PLAYWRIGHT_MODULE` may be an absolute path to an existing Playwright module, `CHROMIUM_BIN` an installed Chromium executable, and `BASE_URL` a local or live app URL ending in `/`. Screenshots go to ignored `artifacts/`. The QA covers desktop/390px/320px, worker analysis, filters, invalid JSON and stale-report cancellation, source selection, export, untrusted text and absence of external requests.
+
+## Nix
+
+`nix build` packages the CLI and static website and runs the Node regression suite
+in the build sandbox. `nix run . -- --help` runs the CLI; `nix develop` provides
+Node and Python. `nix flake check` builds the package check. Linux x86_64 and
+aarch64 are supported. Static assets are in `result/share/driftline/web`.
+
+For NixOS, import `inputs.driftline.nixosModules.default` and set
+`services.driftline.enable = true;` and `services.driftline.domain = "example.org";`.
+The module configures Caddy; arrange DNS and firewall ports 80/443 on the host.
+The package can be overridden with `services.driftline.package`. Existing Arch
+deployment continues to use `./deploy.sh`.
