@@ -1,0 +1,10 @@
+driftline.freifick.net {
+	import security_headers
+	encode zstd gzip
+	root * /srv/http/driftline/current
+	header {
+		Content-Security-Policy "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'self'; worker-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'"
+		Cache-Control "no-cache"
+	}
+	file_server
+}

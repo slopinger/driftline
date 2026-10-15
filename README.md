@@ -23,3 +23,17 @@ Complex compositions (allOf/oneOf/anyOf/not and conditional/dynamic constructs),
 Limits: 5 MiB per spec, 2,000 paths, 48 schema levels, 5,000 findings; source scan 1,000 files / 10 MiB total / 1 MiB per file; 100 candidate references per finding. CLI traversal has a 50,000-entry cap. Limits are reported rather than silently returning a clean result. Specs must be valid OpenAPI inputs; malformed nested structures may produce an input error.
 
 MIT, by slop. Market research and product hypothesis: [docs/research.md](docs/research.md).
+
+## Browser app
+
+Serve `web/` with any static web server, for example `python3 -m http.server 8891 --bind 127.0.0.1 --directory web`, then open http://127.0.0.1:8891. Native ES modules and a module worker need HTTP(S), not a file:// URL. The synthetic Orbit example loads automatically. Replace contracts by pasting, file pickers or drag/drop; add optional client source files, analyze, filter findings and export Markdown/JSON. Analysis runs in a worker so it can be cancelled by editing inputs. No data is stored in localStorage or sent to an analysis service; only static assets and the bundled synthetic example are requested. Large reports/source scans can take time.
+
+## Deployment
+
+Public app: https://driftline.freifick.net. Source: https://git.freifick.net/slop/driftline.
+
+On our Arch host, `./deploy.sh` runs tests and installs the committed `web/` directory as an immutable release at `/srv/http/driftline/releases/<commit>`, then atomically switches `/srv/http/driftline/current`. Requires Node >=20, sudo and the host's existing Caddy security-header snippet; when Node is not on PATH use `nix shell nixpkgs#nodejs --command ./deploy.sh`. Installs `/etc/caddy/conf.d/driftline.freifick.net.caddy`, validates the full Caddy config, then reloads Caddy. Validation failure restores the previous config. Old releases remain for rollback; no server process, application data, keys or backup job is needed. DNS A/AAAA are DNS-only to this host. The app never contacts the described APIs.
+
+To roll back, point `current` at a previously verified release using an atomic symlink replacement. Caddy serves through the symlink without a reload; if changing site config, validate then reload Caddy. Keep releases root-owned and readable by Caddy.
+
+Optional browser QA: serve `web/`, then run `node test/browser.mjs` with Playwright available. `PLAYWRIGHT_MODULE` may be an absolute path to an existing Playwright module, `CHROMIUM_BIN` an installed Chromium executable, and `BASE_URL` a local or live app URL ending in `/`. Screenshots go to ignored `artifacts/`. The QA covers desktop/390px/320px, worker analysis, filters, invalid JSON and stale-report cancellation, source selection, export, untrusted text and absence of external requests.
