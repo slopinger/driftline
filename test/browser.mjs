@@ -21,6 +21,16 @@ try{
   const download=page.waitForEvent('download');await page.locator('#export-json').click();assert.equal((await download).suggestedFilename(),'driftline-report.json');
   await page.screenshot({path:`artifacts/workspace-${width}.png`,fullPage:true});
   if(width===1280){
+   const originalBefore=await page.locator('#before').inputValue();
+   const originalAfter=await page.locator('#after').inputValue();
+   await page.evaluate(()=>{const original=File.prototype.text;File.prototype.text=async function(){await new Promise(r=>setTimeout(r,150));return original.call(this);};});
+   await Promise.all([
+    page.locator('#file-before').setInputFiles({name:'parallel-before.json',mimeType:'application/json',buffer:Buffer.from(originalBefore)}),
+    page.locator('#file-after').setInputFiles({name:'parallel-after.json',mimeType:'application/json',buffer:Buffer.from(originalAfter)})
+   ]);
+   await page.waitForFunction(()=>document.querySelector('#name-before').textContent==='parallel-before.json'&&document.querySelector('#name-after').textContent==='parallel-after.json');
+   assert.equal(await page.locator('#before').inputValue(),originalBefore);assert.equal(await page.locator('#after').inputValue(),originalAfter);
+   assert.equal(await page.locator('#results').isVisible(),false);
    await page.locator('#before').fill('bad json');assert.equal(await page.locator('#results').isVisible(),false);await page.locator('#analyze').click();await page.locator('#error').waitFor({state:'visible'});assert((await page.locator('#error').textContent()).includes('invalid JSON'));
    await page.locator('#load-demo').click();await page.locator('#results').waitFor({state:'visible'});
    const before=JSON.parse(await page.locator('#before').inputValue());const after=structuredClone(before);after.paths={'/<img src=x onerror=alert(1)>':{get:{responses:{'200':{description:'x'}}}}};

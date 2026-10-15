@@ -1,5 +1,6 @@
 import {markdown} from './engine.mjs';
 const $ = id => document.getElementById(id);
+const revisions={before:0,after:0,sources:0};
 let report = null, sources = [], worker = null, filter = 'breaking', selected = null, busy = false, demoGeneration = 0;
 function node(tag, text, className) {const n = document.createElement(tag); if(text !== undefined)n.textContent=text;if(className)n.className=className;return n;}
 function error(message) {$('error').textContent=message;$('error').hidden=!message;}
@@ -11,13 +12,13 @@ function invalidate() {
 function sourceSummary() {$('source-count').textContent=sources.length ? `${sources.length} source file${sources.length===1?'':'s'} · memory only` : 'Optional · locate candidate callers';$('clear-sources').hidden=!sources.length;}
 async function readSpecFile(file, side) {
   if(!file)return;
-  invalidate();const generation=demoGeneration;
+  invalidate();const revision=++revisions[side];
   if(file.size>5*1024*1024){error('Spec file limit is 5 MiB.');return;}
-  try {const text=await file.text();if(generation!==demoGeneration)return;$(side).value=text;$(`name-${side}`).textContent=file.name;}
+  try {const text=await file.text();if(revision!==revisions[side])return;invalidate();$(side).value=text;$(`name-${side}`).textContent=file.name;}
   catch {error('Could not read this file. Try selecting it again.');}
 }
 for (const side of ['before','after']) {
-  $(side).addEventListener('input',invalidate);
+  $(side).addEventListener('input',()=>{++revisions[side];invalidate();});
   $(`file-${side}`).addEventListener('change',event=>{readSpecFile(event.target.files[0],side);event.target.value='';});
   const drop=$(`drop-${side}`);
   drop.addEventListener('dragover',event=>{event.preventDefault();drop.classList.add('dragover');});
@@ -25,12 +26,12 @@ for (const side of ['before','after']) {
   drop.addEventListener('drop',event=>{event.preventDefault();drop.classList.remove('dragover');if(event.dataTransfer.files.length!==1){error('Drop one JSON file into each contract.');return;}readSpecFile(event.dataTransfer.files[0],side);});
 }
 $('sources').addEventListener('change',async event=>{
-  const files=[...event.target.files];event.target.value='';invalidate();const generation=demoGeneration;
+  const files=[...event.target.files];event.target.value='';invalidate();const revision=++revisions.sources;
   if(files.length>1000||files.some(f=>f.size>1024*1024)||files.reduce((n,f)=>n+f.size,0)>10*1024*1024){error('Source limit: 1,000 files, 1 MiB each, 10 MiB total.');return;}
-  try {const loaded=await Promise.all(files.map(async f=>({name:f.webkitRelativePath||f.name,text:await f.text()})));if(generation!==demoGeneration)return;sources=loaded.filter(f=>!f.text.includes('\0'));sourceSummary();}
+  try {const loaded=await Promise.all(files.map(async f=>({name:f.webkitRelativePath||f.name,text:await f.text()})));if(revision!==revisions.sources)return;invalidate();sources=loaded.filter(f=>!f.text.includes('\0'));sourceSummary();}
   catch {error('Could not read one of the source files.');}
 });
-$('clear-sources').addEventListener('click',()=>{invalidate();sources=[];sourceSummary();});
+$('clear-sources').addEventListener('click',()=>{++revisions.sources;invalidate();sources=[];sourceSummary();});
 function analyze() {
   if(busy)return;
   invalidate();busy=true;error('');$('analyze').disabled=true;$('status').textContent='Comparing contracts locally…';
@@ -89,6 +90,7 @@ function download(text,name,type){const url=URL.createObjectURL(new Blob([text],
 $('export-md').addEventListener('click',()=>{if(report)download(markdown(report),'driftline-migration.md','text/markdown');});
 $('export-json').addEventListener('click',()=>{if(report)download(JSON.stringify(report,null,2)+'\n','driftline-report.json','application/json');});
 async function loadDemo() {
+  ++revisions.before;++revisions.after;++revisions.sources;
   invalidate();const generation=demoGeneration;$('status').textContent='Loading the synthetic Orbit API example…';
   try {const response=await fetch(new URL('./demo.json',import.meta.url));if(!response.ok)throw new Error();const demo=await response.json();if(generation!==demoGeneration)return;
     $('before').value=JSON.stringify(demo.before,null,2);$('after').value=JSON.stringify(demo.after,null,2);$('name-before').textContent='orbit-2026.09.json · example';$('name-after').textContent='orbit-2026.10.json · example';sources=demo.sources;sourceSummary();$('search').value='';analyze();
