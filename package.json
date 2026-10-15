@@ -1,0 +1,11 @@
+{
+  "name": "@slop/driftline",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "OpenAPI change impact explorer and CI migration reports",
+  "license": "MIT",
+  "bin": {"driftline": "bin/driftline.mjs"},
+  "scripts": {"test": "node --test test/*.test.mjs", "start": "python3 -m http.server 8891 --bind 127.0.0.1 --directory web"},
+  "engines": {"node": ">=20"}
+}
