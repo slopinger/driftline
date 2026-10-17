@@ -30,7 +30,7 @@ Serve `web/` with any static web server, for example `python3 -m http.server 889
 
 ## Deployment
 
-Public app: https://driftline.freifick.net. Source: https://git.freifick.net/slop/driftline.
+Public app: https://driftline.freifick.net. Source: https://github.com/slopinger/driftline.
 
 On our Arch host, `./deploy.sh` runs tests and installs the committed `web/` directory as an immutable release at `/srv/http/driftline/releases/<commit>`, then atomically switches `/srv/http/driftline/current`. Requires Node >=20, sudo and the host's existing Caddy security-header snippet; when Node is not on PATH use `nix shell nixpkgs#nodejs --command ./deploy.sh`. Installs `/etc/caddy/conf.d/driftline.freifick.net.caddy`, validates the full Caddy config, then reloads Caddy. Validation failure restores the previous config. Old releases remain for rollback; no server process, application data, keys or backup job is needed. DNS A/AAAA are DNS-only to this host. The app never contacts the described APIs.
 
